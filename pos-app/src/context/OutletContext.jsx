@@ -25,45 +25,62 @@ export const OutletProvider = ({ children }) => {
   useEffect(() => {
     if (outlets.length > 0) {
       if (!hasInitialized.current) {
-        const savedOutletId = loadSavedOutletId();
-        if (savedOutletId) {
-          const savedOutlet = outlets.find((o) => o.id === savedOutletId);
-          if (savedOutlet) {
-            setCurrentOutlet(savedOutlet);
+        try {
+          const savedOutletId = loadSavedOutletId();
+          if (savedOutletId) {
+            const savedOutlet = outlets.find((o) => o?.id === savedOutletId);
+            if (savedOutlet) {
+              setCurrentOutlet(savedOutlet);
+            }
           }
+          if (!savedOutletId || !outlets.find((o) => o?.id === savedOutletId)) {
+            if (outlets[0]) {
+              setCurrentOutlet(outlets[0]);
+              localStorage.setItem('pos_current_outlet', outlets[0].id.toString());
+            }
+          }
+          hasInitialized.current = true;
+        } catch (error) {
+          console.error('Error initializing outlet:', error);
+          if (outlets[0]) {
+            setCurrentOutlet(outlets[0]);
+          }
+          hasInitialized.current = true;
         }
-
-        if (!savedOutletId || !outlets.find((o) => o.id === savedOutletId)) {
-          setCurrentOutlet(outlets[0]);
-          localStorage.setItem('pos_current_outlet', outlets[0].id.toString());
-        }
-        hasInitialized.current = true;
       } else if (currentOutlet) {
-        const updatedOutlet = outlets.find((o) => o.id === currentOutlet.id);
+        const updatedOutlet = outlets.find((o) => o?.id === currentOutlet?.id);
         if (updatedOutlet) {
           setCurrentOutlet(updatedOutlet);
         }
       }
     }
-  }, [outlets]);
+  }, [outlets, currentOutlet]);
 
   const loadOutlets = async () => {
     setLoading(true);
     try {
       const response = await outletsAPI.getAll({ status: 'active' });
-      if (response.success) {
+      if (response?.success && Array.isArray(response.data)) {
         setOutlets(response.data);
+      } else {
+        setOutlets([]);
       }
     } catch (error) {
       console.error('Failed to load outlets:', error);
+      setOutlets([]);
     } finally {
       setLoading(false);
     }
   };
 
   const loadSavedOutletId = () => {
-    const savedOutletId = localStorage.getItem('pos_current_outlet');
-    return savedOutletId ? parseInt(savedOutletId, 10) : null;
+    try {
+      const savedOutletId = localStorage.getItem('pos_current_outlet');
+      return savedOutletId ? parseInt(savedOutletId, 10) : null;
+    } catch (error) {
+      console.error('Error loading saved outlet:', error);
+      return null;
+    }
   };
 
   const switchOutlet = async (outletId) => {

@@ -137,11 +137,11 @@ class AdminMenu {
      */
     private function enqueue_pos_app() {
         $manifest_path = STORE_POS_PLUGIN_DIR . 'assets/js/build/manifest.json';
-        
+
         // Check if build exists
         if (file_exists($manifest_path)) {
             $manifest = json_decode(file_get_contents($manifest_path), true);
-            
+
             if (isset($manifest['index.html'])) {
                 // Production build
                 wp_enqueue_script(
@@ -208,44 +208,67 @@ class AdminMenu {
      * Enqueue Admin React SPA
      */
     private function enqueue_admin_spa() {
-        $manifest_path = STORE_POS_PLUGIN_DIR . 'assets/js/admin-build/.vite/manifest.json';
-        
-        // Check if build exists
-        if (file_exists($manifest_path)) {
-            $manifest = json_decode(file_get_contents($manifest_path), true);
-            
-            if (isset($manifest['index.html'])) {
-                // Production build
-                wp_enqueue_script(
-                    'store-pos-admin-app',
-                    STORE_POS_PLUGIN_URL . 'assets/js/admin-build/' . $manifest['index.html']['file'],
-                    [],
-                    STORE_POS_VERSION,
-                    true
-                );
+        $env = defined('STORE_POS_ENV') ? STORE_POS_ENV : 'production';
+        $is_dev = ('development' === $env);
+        $script_handle = 'store-pos-admin-app';
+        $build_variant = $is_dev ? 'admin-dev-build' : 'admin-build';
+        $assets_base = 'assets/js/' . $build_variant . '/';
+        $manifest_path = STORE_POS_PLUGIN_DIR . $assets_base . '.vite/manifest.json';
 
-                wp_script_add_data('store-pos-admin-app', 'type', 'module');
-
-                if (isset($manifest['index.html']['css'])) {
-                    foreach ($manifest['index.html']['css'] as $css_file) {
-                        wp_enqueue_style(
-                            'store-pos-admin-app-' . md5($css_file),
-                            STORE_POS_PLUGIN_URL . 'assets/js/admin-build/' . $css_file,
-                            [],
-                            STORE_POS_VERSION
-                        );
-                    }
-                }
-            }
-        } else {
-            // Development mode - show instruction
-            add_action('admin_notices', function() {
+        if (!file_exists($manifest_path)) {
+            add_action('admin_notices', function() use ($is_dev) {
                 ?>
                 <div class="notice notice-warning">
-                    <p><?php _e('Admin app not built yet. Run <code>npm run build</code> in the admin-app directory.', 'store-pos'); ?></p>
+                    <p>
+                        <?php
+                        if ($is_dev) {
+                            esc_html_e('Admin development bundle not found. Run "npm run build:dev" or "npm run watch" in admin-app.', 'store-pos');
+                        } else {
+                            esc_html_e('Admin app not built yet. Run "npm run build" in the admin-app directory.', 'store-pos');
+                        }
+                        ?>
+                    </p>
                 </div>
                 <?php
             });
+            if ($is_dev) {
+                error_log('[Store POS] Admin development build not found. Run "npm run build:dev" or "npm run watch" in admin-app.');
+            }
+            return;
+        }
+
+        $manifest = json_decode(file_get_contents($manifest_path), true);
+        $entry = $manifest['index.html'] ?? null;
+
+        if (!$entry || empty($entry['file'])) {
+            return;
+        }
+
+        $js_relative = $entry['file'];
+        $js_file_path = STORE_POS_PLUGIN_DIR . $assets_base . $js_relative;
+        $js_version = file_exists($js_file_path) ? filemtime($js_file_path) : STORE_POS_VERSION;
+
+        wp_enqueue_script(
+            $script_handle,
+            STORE_POS_PLUGIN_URL . $assets_base . $js_relative,
+            [],
+            $js_version,
+            true
+        );
+        wp_script_add_data($script_handle, 'type', 'module');
+
+        if (!empty($entry['css'])) {
+            foreach ($entry['css'] as $css_file) {
+                $css_file_path = STORE_POS_PLUGIN_DIR . $assets_base . $css_file;
+                $css_version = file_exists($css_file_path) ? filemtime($css_file_path) : STORE_POS_VERSION;
+
+                wp_enqueue_style(
+                    'store-pos-admin-app-' . md5($css_file),
+                    STORE_POS_PLUGIN_URL . $assets_base . $css_file,
+                    [],
+                    $css_version
+                );
+            }
         }
 
         // Pass configuration to React admin app
@@ -350,11 +373,11 @@ class AdminMenu {
 
                     const params = new URLSearchParams(urlParts[1]);
                     const page = params.get('page');
-                    
+
                     if (page && routeMap[page]) {
                         // Rewrite link to use hash routing
                         link.href = baseUrl + '#' + routeMap[page];
-                        
+
                         // Add click handler to ensure navigation works
                         link.addEventListener('click', function(e) {
                             e.preventDefault();

@@ -20,6 +20,27 @@ const ProductGrid = ({ searchQuery, selectedCategory }) => {
   const requestIdRef = useRef(0);
   const lastQueryRef = useRef({ search: '', category: null });
 
+  // Calculate grid columns class - must be before any returns
+  const gridColumnsClass = useMemo(() => {
+    const value = parseInt(settings.products_per_row || 4, 10);
+    switch (value) {
+      case 1:
+        return 'grid-cols-1';
+      case 2:
+        return 'grid-cols-2';
+      case 3:
+        return 'grid-cols-2 md:grid-cols-3';
+      case 4:
+        return 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4';
+      case 5:
+        return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5';
+      case 6:
+        return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6';
+      default:
+        return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+    }
+  }, [settings.products_per_row]);
+
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, selectedCategory]);
@@ -152,26 +173,6 @@ const ProductGrid = ({ searchQuery, selectedCategory }) => {
       </div>
     );
   }
-
-  const gridColumnsClass = useMemo(() => {
-    const value = parseInt(settings.products_per_row || 4, 10);
-    switch (value) {
-      case 1:
-        return 'grid-cols-1';
-      case 2:
-        return 'grid-cols-2';
-      case 3:
-        return 'grid-cols-2 md:grid-cols-3';
-      case 4:
-        return 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4';
-      case 5:
-        return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5';
-      case 6:
-        return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6';
-      default:
-        return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
-    }
-  }, [settings.products_per_row]);
 
   return (
     <div>

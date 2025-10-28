@@ -38,32 +38,51 @@ class POSShortcode {
      * Enqueue POS assets
      */
     private function enqueue_pos_assets() {
-        $manifest_path = STORE_POS_PLUGIN_DIR . 'assets/js/build/.vite/manifest.json';
-        
-        // Check if build exists
-        if (file_exists($manifest_path)) {
-            $manifest = json_decode(file_get_contents($manifest_path), true);
-            
-            if (isset($manifest['index.html'])) {
-                // Production build
-                wp_enqueue_script(
-                    'store-pos-app',
-                    STORE_POS_PLUGIN_URL . 'assets/js/build/' . $manifest['index.html']['file'],
-                    [],
-                    STORE_POS_VERSION,
-                    true
-                );
+        $script_handle = 'store-pos-app';
+        $env = defined('STORE_POS_ENV') ? STORE_POS_ENV : 'production';
+        $is_dev = ('development' === $env);
+        $build_variant = $is_dev ? 'dev-build' : 'build';
+        $assets_base = 'assets/js/' . $build_variant . '/';
+        $manifest_path = STORE_POS_PLUGIN_DIR . $assets_base . '.vite/manifest.json';
 
-                if (isset($manifest['index.html']['css'])) {
-                    foreach ($manifest['index.html']['css'] as $css_file) {
-                        wp_enqueue_style(
-                            'store-pos-app-' . md5($css_file),
-                            STORE_POS_PLUGIN_URL . 'assets/js/build/' . $css_file,
-                            [],
-                            STORE_POS_VERSION
-                        );
-                    }
-                }
+        if (!file_exists($manifest_path)) {
+            if ($is_dev) {
+                error_log('[Store POS] Development build not found. Run "npm run build:dev" or "npm run watch" in pos-app.');
+            }
+            return;
+        }
+
+        $manifest = json_decode(file_get_contents($manifest_path), true);
+        $entry = $manifest['index.html'] ?? null;
+
+        if (!$entry || empty($entry['file'])) {
+            return;
+        }
+
+        $js_relative = $entry['file'];
+        $js_file_path = STORE_POS_PLUGIN_DIR . $assets_base . $js_relative;
+        $js_version = file_exists($js_file_path) ? filemtime($js_file_path) : STORE_POS_VERSION;
+
+        wp_enqueue_script(
+            $script_handle,
+            STORE_POS_PLUGIN_URL . $assets_base . $js_relative,
+            [],
+            $js_version,
+            true
+        );
+        wp_script_add_data($script_handle, 'type', 'module');
+
+        if (!empty($entry['css'])) {
+            foreach ($entry['css'] as $css_file) {
+                $css_file_path = STORE_POS_PLUGIN_DIR . $assets_base . $css_file;
+                $css_version = file_exists($css_file_path) ? filemtime($css_file_path) : STORE_POS_VERSION;
+
+                wp_enqueue_style(
+                    'store-pos-app-' . md5($css_file),
+                    STORE_POS_PLUGIN_URL . $assets_base . $css_file,
+                    [],
+                    $css_version
+                );
             }
         }
 
@@ -76,7 +95,8 @@ class POSShortcode {
             $basename = '/';
         }
 
-        wp_localize_script('store-pos-app', 'storePOSConfig', [
+        if (wp_script_is($script_handle, 'enqueued')) {
+            wp_localize_script('store-pos-app', 'storePOSConfig', [
             'restUrl' => rest_url('store-pos/v1'),
             'restNonce' => wp_create_nonce('wp_rest'),
             'basename' => $basename,
@@ -102,5 +122,7 @@ class POSShortcode {
                 'products_per_row' => (int) get_option('store_pos_products_per_row', 4),
             ],
         ]);
+        }
     }
+
 }

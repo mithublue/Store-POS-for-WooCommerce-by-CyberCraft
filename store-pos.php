@@ -30,6 +30,41 @@ define('STORE_POS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('STORE_POS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('STORE_POS_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
+// Load .env file if present
+$env_file = STORE_POS_PLUGIN_DIR . '.env';
+if (file_exists($env_file) && is_readable($env_file)) {
+    $env_lines = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($env_lines as $line) {
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+
+        if (strpos($line, '=') !== false) {
+            list($name, $value) = array_map('trim', explode('=', $line, 2));
+            if ($name !== '' && !getenv($name)) {
+                putenv("{$name}={$value}");
+                $_ENV[$name] = $value;
+                $_SERVER[$name] = $value;
+            }
+        }
+    }
+}
+
+if (!defined('STORE_POS_ENV')) {
+    $default_env = getenv('STORE_POS_ENV') ?: 'production';
+    define('STORE_POS_ENV', apply_filters('store_pos_environment', $default_env));
+}
+
+if (!defined('STORE_POS_POS_DEV_SERVER')) {
+    $default_pos_dev = getenv('STORE_POS_POS_DEV_SERVER') ?: 'http://localhost:3000';
+    define('STORE_POS_POS_DEV_SERVER', apply_filters('store_pos_pos_dev_server', $default_pos_dev));
+}
+
+if (!defined('STORE_POS_ADMIN_DEV_SERVER')) {
+    $default_admin_dev = getenv('STORE_POS_ADMIN_DEV_SERVER') ?: 'http://localhost:3100';
+    define('STORE_POS_ADMIN_DEV_SERVER', apply_filters('store_pos_admin_dev_server', $default_admin_dev));
+}
+
 /**
  * Composer autoloader.
  */
