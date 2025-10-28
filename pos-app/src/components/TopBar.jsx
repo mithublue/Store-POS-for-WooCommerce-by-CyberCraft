@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiSearch, FiLogOut, FiUser, FiSettings, FiShoppingBag } from 'react-icons/fi';
 import { useOutlet } from '../context/OutletContext';
 import { useDrawer } from '../context/DrawerContext';
 import DrawerStatusModal from './DrawerStatusModal';
+import useDebounce from '../hooks/useDebounce';
 
 const TopBar = ({ searchQuery, setSearchQuery }) => {
   const { currentOutlet, outlets, switchOutlet } = useOutlet();
   const { currentSession, isDrawerOpen } = useDrawer();
   const [showDrawerModal, setShowDrawerModal] = useState(false);
+  const [internalSearch, setInternalSearch] = useState(searchQuery || '');
+  const debouncedValue = useDebounce(internalSearch, 300);
 
   const config = window.storePOSConfig || {};
   const currentUser = config.currentUser || {};
+
+  useEffect(() => {
+    if (debouncedValue !== searchQuery) {
+      setSearchQuery(debouncedValue);
+    }
+  }, [debouncedValue, searchQuery, setSearchQuery]);
+
+  useEffect(() => {
+    setInternalSearch(searchQuery || '');
+  }, [searchQuery]);
 
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
@@ -58,8 +71,8 @@ const TopBar = ({ searchQuery, setSearchQuery }) => {
             <input
               type="text"
               placeholder="Search products by name, SKU, or barcode..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={internalSearch}
+              onChange={(e) => setInternalSearch(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               autoFocus
             />

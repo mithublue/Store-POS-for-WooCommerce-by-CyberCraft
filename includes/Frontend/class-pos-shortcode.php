@@ -88,7 +88,7 @@ class POSShortcode {
             ],
             'currency' => [
                 'code' => get_woocommerce_currency(),
-                'symbol' => get_woocommerce_currency_symbol(),
+                'symbol' => html_entity_decode(get_woocommerce_currency_symbol()),
                 'position' => get_option('woocommerce_currency_pos'),
                 'decimal_separator' => wc_get_price_decimal_separator(),
                 'thousand_separator' => wc_get_price_thousand_separator(),
@@ -99,6 +99,7 @@ class POSShortcode {
                 'auto_print' => get_option('store_pos_auto_print', 'yes'),
                 'barcode_field' => get_option('store_pos_barcode_field', '_sku'),
                 'enable_typesense' => get_option('store_pos_enable_typesense', 'no'),
+                'products_per_row' => (int) get_option('store_pos_products_per_row', 4),
             ],
         ]);
     }

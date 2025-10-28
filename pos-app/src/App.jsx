@@ -10,10 +10,8 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 
 function App() {
-  const basename = (window.storePOSConfig && window.storePOSConfig.basename) || '/';
-
   return (
-    <Router basename={basename}>
+    <Router>
       <OutletProvider>
         <DrawerProvider>
           <CartProvider>
@@ -42,13 +40,13 @@ function App() {
                   },
                 }}
               />
-              
+
               <Routes>
-                <Route path="/" element={<Navigate to="/pos" replace />} />
-                <Route path="/pos" element={<POSLayout />} />
+                <Route path="/" element={<POSLayout />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<POSLayout />} />
               </Routes>
             </div>
           </CartProvider>

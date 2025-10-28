@@ -1,44 +1,89 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { productsAPI } from '../utils/api';
 import { useCart } from '../context/CartContext';
-import { formatPrice } from '../utils/currency';
+import { formatPrice, decodeHtmlEntities } from '../utils/currency';
+import useDebounce from '../hooks/useDebounce';
 import toast from 'react-hot-toast';
 import { FiShoppingCart, FiPackage } from 'react-icons/fi';
 
 const ProductGrid = ({ searchQuery, selectedCategory }) => {
+  const config = window.storePOSConfig || {};
+  const settings = config.settings || {};
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const { addItem } = useCart();
 
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const controllerRef = useRef(null);
+  const requestIdRef = useRef(0);
+  const lastQueryRef = useRef({ search: '', category: null });
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, selectedCategory]);
+
   useEffect(() => {
     loadProducts();
-  }, [searchQuery, selectedCategory, page]);
+
+    return () => {
+      if (controllerRef.current) {
+        controllerRef.current.abort();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, selectedCategory, page]);
 
   const loadProducts = async () => {
+    const isNewQuery =
+      page === 1 &&
+      (debouncedSearch !== lastQueryRef.current.search || selectedCategory !== lastQueryRef.current.category);
+
+    if (isNewQuery) {
+      setProducts([]);
+      setHasMore(true);
+    }
+
     setLoading(true);
+
+    if (controllerRef.current) {
+      controllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    const requestId = ++requestIdRef.current;
+
     try {
       const params = {
         page,
         per_page: 20,
       };
 
-      if (searchQuery) {
-        params.search = searchQuery;
+      if (debouncedSearch) {
+        params.search = debouncedSearch;
       }
 
       if (selectedCategory) {
         params.category = selectedCategory;
       }
 
-      const response = await productsAPI.getAll(params);
+      const response = await productsAPI.getAll(params, { signal: controller.signal });
       
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       if (response.success) {
         const newProducts = response.data.products || [];
-        
+
         if (page === 1) {
           setProducts(newProducts);
+          lastQueryRef.current = {
+            search: debouncedSearch,
+            category: selectedCategory,
+          };
         } else {
           setProducts(prev => [...prev, ...newProducts]);
         }
@@ -46,10 +91,16 @@ const ProductGrid = ({ searchQuery, selectedCategory }) => {
         setHasMore(response.data.current_page < response.data.pages);
       }
     } catch (error) {
+      if (controller.signal.aborted || error.name === 'CanceledError' || error.message === 'canceled') {
+        return;
+      }
       toast.error('Failed to load products');
       console.error(error);
     } finally {
-      setLoading(false);
+      if (controllerRef.current === controller) {
+        controllerRef.current = null;
+        setLoading(false);
+      }
     }
   };
 
@@ -102,9 +153,29 @@ const ProductGrid = ({ searchQuery, selectedCategory }) => {
     );
   }
 
+  const gridColumnsClass = useMemo(() => {
+    const value = parseInt(settings.products_per_row || 4, 10);
+    switch (value) {
+      case 1:
+        return 'grid-cols-1';
+      case 2:
+        return 'grid-cols-2';
+      case 3:
+        return 'grid-cols-2 md:grid-cols-3';
+      case 4:
+        return 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4';
+      case 5:
+        return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5';
+      case 6:
+        return 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6';
+      default:
+        return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+    }
+  }, [settings.products_per_row]);
+
   return (
     <div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className={`grid ${gridColumnsClass} gap-4`}>
         {products.map((product) => (
           <div
             key={product.id}
@@ -129,7 +200,7 @@ const ProductGrid = ({ searchQuery, selectedCategory }) => {
             {/* Product Info */}
             <div className="space-y-2">
               <h3 className="font-medium text-gray-900 text-sm line-clamp-2">
-                {product.name}
+                {decodeHtmlEntities(product.name)}
               </h3>
 
               {product.sku && (

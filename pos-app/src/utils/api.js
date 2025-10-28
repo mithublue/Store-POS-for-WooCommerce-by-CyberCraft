@@ -35,11 +35,11 @@ api.interceptors.response.use(
 
 // API methods
 export const productsAPI = {
-  getAll: (params) => api.get('/products', { params }),
-  getById: (id) => api.get(`/products/${id}`),
-  getByBarcode: (barcode) => api.get(`/products/barcode/${barcode}`),
-  getCategories: () => api.get('/products/categories'),
-  updateStock: (id, data) => api.put(`/products/${id}/stock`, data),
+  getAll: (params, options = {}) => api.get('/products', { params, ...options }),
+  getById: (id, options = {}) => api.get(`/products/${id}`, options),
+  getByBarcode: (barcode, options = {}) => api.get(`/products/barcode/${barcode}`, options),
+  getCategories: (options = {}) => api.get('/products/categories', options),
+  updateStock: (id, data, options = {}) => api.put(`/products/${id}/stock`, data, options),
 };
 
 export const ordersAPI = {
@@ -51,10 +51,10 @@ export const ordersAPI = {
 };
 
 export const customersAPI = {
-  search: (search) => api.get('/customers/search', { params: { search } }),
-  getAll: (params) => api.get('/customers', { params }),
-  getById: (id) => api.get(`/customers/${id}`),
-  create: (data) => api.post('/customers', data),
+  search: (search, options = {}) => api.get('/customers/search', { params: { search }, ...options }),
+  getAll: (params, options = {}) => api.get('/customers', { params, ...options }),
+  getById: (id, options = {}) => api.get(`/customers/${id}`, options),
+  create: (data, options = {}) => api.post('/customers', data, options),
 };
 
 export const outletsAPI = {

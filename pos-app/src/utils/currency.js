@@ -1,11 +1,29 @@
 const config = window.storePOSConfig || {};
 const currency = config.currency || {};
 
+export const decodeHtmlEntities = (value) => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = value;
+  return textarea.value;
+};
+
 /**
  * Format price according to WooCommerce settings
  */
 export const formatPrice = (amount) => {
-  const { symbol = '$', position = 'left', decimals = 2, decimal_separator = '.', thousand_separator = ',' } = currency;
+  const {
+    symbol = '$',
+    position = 'left',
+    decimals = 2,
+    decimal_separator = '.',
+    thousand_separator = ',',
+  } = currency;
+
+  const decodedSymbol = decodeHtmlEntities(symbol);
   
   const formatted = parseFloat(amount).toFixed(decimals)
     .replace('.', decimal_separator)
@@ -13,15 +31,15 @@ export const formatPrice = (amount) => {
   
   switch (position) {
     case 'left':
-      return symbol + formatted;
+      return decodedSymbol + formatted;
     case 'right':
-      return formatted + symbol;
+      return formatted + decodedSymbol;
     case 'left_space':
-      return symbol + ' ' + formatted;
+      return decodedSymbol + ' ' + formatted;
     case 'right_space':
-      return formatted + ' ' + symbol;
+      return formatted + ' ' + decodedSymbol;
     default:
-      return symbol + formatted;
+      return decodedSymbol + formatted;
   }
 };
 
@@ -42,7 +60,7 @@ export const parsePrice = (priceString) => {
  * Get currency symbol
  */
 export const getCurrencySymbol = () => {
-  return currency.symbol || '$';
+  return decodeHtmlEntities(currency.symbol || '$');
 };
 
 /**

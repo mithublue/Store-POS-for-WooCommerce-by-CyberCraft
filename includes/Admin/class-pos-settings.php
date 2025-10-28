@@ -17,6 +17,15 @@ class Settings {
         register_setting('store_pos_settings', 'store_pos_tax_display');
         register_setting('store_pos_settings', 'store_pos_auto_print');
         register_setting('store_pos_settings', 'store_pos_barcode_field');
+        register_setting(
+            'store_pos_settings',
+            'store_pos_products_per_row',
+            [
+                'type' => 'integer',
+                'sanitize_callback' => [$this, 'sanitize_products_per_row'],
+                'default' => 4,
+            ]
+        );
         register_setting('store_pos_settings', 'store_pos_enable_typesense');
         register_setting('store_pos_settings', 'store_pos_typesense_host');
         register_setting('store_pos_settings', 'store_pos_typesense_port');
@@ -54,6 +63,14 @@ class Settings {
             'barcode_field',
             __('Barcode Field', 'store-pos'),
             [$this, 'render_barcode_field'],
+            'store_pos_settings',
+            'store_pos_general'
+        );
+
+        add_settings_field(
+            'products_per_row',
+            __('Products Per Row', 'store-pos'),
+            [$this, 'render_products_per_row_field'],
             'store_pos_settings',
             'store_pos_general'
         );
@@ -131,6 +148,19 @@ class Settings {
         );
     }
 
+    public function sanitize_products_per_row($value) {
+        $value = absint($value);
+        if ($value < 1) {
+            $value = 1;
+        }
+
+        if ($value > 6) {
+            $value = 6;
+        }
+
+        return $value;
+    }
+
     public function render_general_section() {
         echo '<p>' . __('Configure general POS settings.', 'store-pos') . '</p>';
     }
@@ -163,6 +193,14 @@ class Settings {
             <option value="_barcode" <?php selected($value, '_barcode'); ?>><?php _e('Custom Barcode Field', 'store-pos'); ?></option>
         </select>
         <p class="description"><?php _e('Select which field to use for barcode scanning.', 'store-pos'); ?></p>
+        <?php
+    }
+
+    public function render_products_per_row_field() {
+        $value = get_option('store_pos_products_per_row', 4);
+        ?>
+        <input type="number" name="store_pos_products_per_row" value="<?php echo esc_attr($value); ?>" class="small-text" min="1" max="6">
+        <p class="description"><?php _e('Number of product cards to display per row in the POS grid (1-6).', 'store-pos'); ?></p>
         <?php
     }
 

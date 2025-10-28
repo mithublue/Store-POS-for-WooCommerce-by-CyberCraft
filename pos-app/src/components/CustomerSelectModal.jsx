@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import { customersAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 import { FiX, FiSearch, FiUserPlus, FiUser } from 'react-icons/fi';
+import useDebounce from '../hooks/useDebounce';
 
 const CustomerSelectModal = ({ onClose }) => {
   const { setCustomer } = useCart();
@@ -17,22 +18,49 @@ const CustomerSelectModal = ({ onClose }) => {
     phone: '',
   });
 
-  const handleSearch = async () => {
-    if (searchQuery.length < 2) {
-      toast.error('Enter at least 2 characters to search');
-      return;
+  const debouncedSearch = useDebounce(searchQuery, 400);
+  const controllerRef = useRef(null);
+
+  useEffect(() => {
+    if (debouncedSearch && debouncedSearch.length >= 2) {
+      handleSearch();
+    } else if (debouncedSearch.length === 0) {
+      setCustomers([]);
     }
 
+    return () => {
+      if (controllerRef.current) {
+        controllerRef.current.abort();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
+  const handleSearch = async () => {
     setLoading(true);
+
+    if (controllerRef.current) {
+      controllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
     try {
-      const response = await customersAPI.search(searchQuery);
+      const response = await customersAPI.search(debouncedSearch, { signal: controller.signal });
       if (response.success) {
         setCustomers(response.data);
       }
     } catch (error) {
+      if (controller.signal.aborted || error.name === 'CanceledError' || error.message === 'canceled') {
+        return;
+      }
       toast.error('Failed to search customers');
     } finally {
-      setLoading(false);
+      if (controllerRef.current === controller) {
+        controllerRef.current = null;
+        setLoading(false);
+      }
     }
   };
 
@@ -86,14 +114,15 @@ const CustomerSelectModal = ({ onClose }) => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                     placeholder="Search by name or email..."
                     className="w-full pl-10 input"
                   />
                 </div>
-                <button onClick={handleSearch} className="btn btn-primary" disabled={loading}>
-                  {loading ? 'Searching...' : 'Search'}
-                </button>
+                {loading && (
+                  <div className="flex items-center px-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                  </div>
+                )}
               </div>
 
               {/* Walk-in Customer */}

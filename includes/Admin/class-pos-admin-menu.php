@@ -75,51 +75,43 @@ class AdminMenu {
             'store-pos-settings',
             [$this, 'render_settings_page']
         );
+
+        add_action('admin_footer', [$this, 'output_admin_navigation_script']);
     }
 
     /**
      * Render POS app page (now redirects to shortcode page)
      */
     public function render_pos_app() {
-        if (!Permissions::can_use_pos()) {
-            wp_die(__('You do not have permission to access the POS.', 'store-pos'));
-        }
-
-        // Redirect to POS shortcode page or render inline
-        echo '<div class="wrap">';
-        echo '<div class="notice notice-info"><p>';
-        echo __('Use the shortcode <code>[store_pos]</code> on any page to display the POS terminal.', 'store-pos');
-        echo '</p></div>';
-        echo '<div id="store-pos-app" class="store-pos-wrapper"></div>';
-        echo '</div>';
+        $this->render_admin_root();
     }
 
     /**
      * Render outlets management page (React SPA)
      */
     public function render_outlets_page() {
-        echo '<div id="store-pos-admin-root"></div>';
+        $this->render_admin_root();
     }
 
     /**
      * Render drawers management page (React SPA)
      */
     public function render_drawers_page() {
-        echo '<div id="store-pos-admin-root"></div>';
+        $this->render_admin_root();
     }
 
     /**
      * Render reports page (React SPA)
      */
     public function render_reports_page() {
-        echo '<div id="store-pos-admin-root"></div>';
+        $this->render_admin_root();
     }
 
     /**
      * Render settings page (React SPA)
      */
     public function render_settings_page() {
-        echo '<div id="store-pos-admin-root"></div>';
+        $this->render_admin_root();
     }
 
     /**
@@ -196,7 +188,7 @@ class AdminMenu {
             ],
             'currency' => [
                 'code' => get_woocommerce_currency(),
-                'symbol' => get_woocommerce_currency_symbol(),
+                'symbol' => html_entity_decode(get_woocommerce_currency_symbol()),
                 'position' => get_option('woocommerce_currency_pos'),
                 'decimal_separator' => wc_get_price_decimal_separator(),
                 'thousand_separator' => wc_get_price_thousand_separator(),
@@ -207,6 +199,7 @@ class AdminMenu {
                 'auto_print' => get_option('store_pos_auto_print', 'yes'),
                 'barcode_field' => get_option('store_pos_barcode_field', '_sku'),
                 'enable_typesense' => get_option('store_pos_enable_typesense', 'no'),
+                'products_per_row' => (int) get_option('store_pos_products_per_row', 4),
             ],
         ]);
     }
@@ -256,10 +249,33 @@ class AdminMenu {
         }
 
         // Pass configuration to React admin app
+        $route_map = [
+            'store-pos' => '/dashboard',
+            'store-pos-outlets' => '/outlets',
+            'store-pos-drawers' => '/drawers',
+            'store-pos-reports' => '/reports',
+            'store-pos-settings' => '/settings',
+        ];
+
+        $initial_route = '/dashboard';
+        if (isset($_GET['page']) && is_string($_GET['page'])) {
+            $page_param = sanitize_text_field(wp_unslash($_GET['page']));
+
+            if (isset($route_map[$page_param])) {
+                $initial_route = $route_map[$page_param];
+            } elseif (strpos($page_param, '#') !== false) {
+                $fragment = explode('#', $page_param)[1];
+                if (!empty($fragment)) {
+                    $initial_route = strpos($fragment, '/') === 0 ? $fragment : '/' . $fragment;
+                }
+            }
+        }
+
         wp_localize_script('store-pos-admin-app', 'storePOSAdmin', [
             'restUrl' => rest_url('store-pos/v1'),
             'restNonce' => wp_create_nonce('wp_rest'),
             'ajaxUrl' => admin_url('admin-ajax.php'),
+            'initialRoute' => $initial_route,
             'currentUser' => [
                 'id' => get_current_user_id(),
                 'name' => wp_get_current_user()->display_name,
@@ -267,5 +283,104 @@ class AdminMenu {
                 'roles' => wp_get_current_user()->roles,
             ],
         ]);
+    }
+
+    /**
+     * Render React admin root container
+     */
+    private function render_admin_root() {
+        if (!Permissions::can_manage_pos() && !Permissions::can_manage_drawers() && !Permissions::can_view_reports()) {
+            if (!Permissions::can_use_pos()) {
+                wp_die(__('You do not have permission to access the POS.', 'store-pos'));
+            }
+        }
+
+        echo '<div id="store-pos-admin-root"></div>';
+    }
+
+    /**
+     * Output navigation script to convert submenu links to hash-based SPA routes
+     */
+    public function output_admin_navigation_script() {
+        $screen = get_current_screen();
+        if (!$screen || strpos($screen->id, 'store-pos') === false) {
+            return;
+        }
+
+        $route_map = [
+            'store-pos' => 'dashboard',
+            'store-pos-outlets' => 'outlets',
+            'store-pos-drawers' => 'drawers',
+            'store-pos-reports' => 'reports',
+            'store-pos-settings' => 'settings',
+        ];
+
+        $base_url = admin_url('admin.php?page=store-pos');
+        ?>
+        <script type="text/javascript">
+        (function() {
+            const routeMap = <?php echo wp_json_encode($route_map); ?>;
+            const baseUrl = <?php echo wp_json_encode($base_url); ?>;
+
+            function initMenuLinks() {
+                const menu = document.getElementById('toplevel_page_store-pos');
+                if (!menu) {
+                    return;
+                }
+
+                // Update top-level link
+                const topLink = menu.querySelector('> a.menu-top');
+                if (topLink) {
+                    topLink.href = baseUrl + '#dashboard';
+                }
+
+                // Update all submenu links
+                const submenuLinks = menu.querySelectorAll('.wp-submenu a');
+                submenuLinks.forEach(function(link) {
+                    const href = link.getAttribute('href');
+                    if (!href) {
+                        return;
+                    }
+
+                    // Extract page parameter
+                    const urlParts = href.split('?');
+                    if (urlParts.length < 2) {
+                        return;
+                    }
+
+                    const params = new URLSearchParams(urlParts[1]);
+                    const page = params.get('page');
+                    
+                    if (page && routeMap[page]) {
+                        // Rewrite link to use hash routing
+                        link.href = baseUrl + '#' + routeMap[page];
+                        
+                        // Add click handler to ensure navigation works
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            window.location.href = baseUrl + '#' + routeMap[page];
+                        });
+                    }
+                });
+            }
+
+            // Initialize on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initMenuLinks);
+            } else {
+                initMenuLinks();
+            }
+
+            // Re-initialize on AJAX complete (for WordPress admin)
+            document.addEventListener('DOMContentLoaded', function() {
+                if (typeof jQuery !== 'undefined') {
+                    jQuery(document).on('ajaxComplete', function() {
+                        setTimeout(initMenuLinks, 100);
+                    });
+                }
+            });
+        })();
+        </script>
+        <?php
     }
 }
