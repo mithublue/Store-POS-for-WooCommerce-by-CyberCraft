@@ -10,8 +10,10 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 
 function App() {
+  const basename = (window.storePOSConfig && window.storePOSConfig.basename) || '/';
+
   return (
-    <Router>
+    <Router basename={basename}>
       <OutletProvider>
         <DrawerProvider>
           <CartProvider>

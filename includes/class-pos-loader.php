@@ -68,6 +68,7 @@ class Loader {
 
         // Frontend
         require_once STORE_POS_PLUGIN_DIR . 'includes/Frontend/class-pos-frontend.php';
+        require_once STORE_POS_PLUGIN_DIR . 'includes/Frontend/class-pos-shortcode.php';
     }
 
     /**
@@ -94,7 +95,10 @@ class Loader {
      */
     private function define_frontend_hooks() {
         $frontend = new Frontend\POSFrontend();
+        $shortcode = new Frontend\POSShortcode();
+        
         $this->add_action('wp_enqueue_scripts', $frontend, 'enqueue_assets');
+        $this->add_action('init', $shortcode, 'register');
     }
 
     /**

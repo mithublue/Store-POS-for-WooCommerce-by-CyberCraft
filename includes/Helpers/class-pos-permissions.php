@@ -18,7 +18,7 @@ class Permissions {
         }
         $user = get_userdata($user_id);
         return $user && (
-            $user->has_cap('manage_pos') || 
+            $user->has_cap('manage_pos') ||
             $user->has_cap('administrator')
         );
     }
@@ -32,8 +32,8 @@ class Permissions {
         }
         $user = get_userdata($user_id);
         return $user && (
-            $user->has_cap('use_pos') || 
-            $user->has_cap('manage_pos') || 
+            $user->has_cap('use_pos') ||
+            $user->has_cap('manage_pos') ||
             $user->has_cap('administrator')
         );
     }
@@ -47,7 +47,7 @@ class Permissions {
         }
         $user = get_userdata($user_id);
         return $user && (
-            $user->has_cap('manage_drawers') || 
+            $user->has_cap('manage_drawers') ||
             $user->has_cap('administrator')
         );
     }
@@ -61,7 +61,7 @@ class Permissions {
         }
         $user = get_userdata($user_id);
         return $user && (
-            $user->has_cap('view_pos_reports') || 
+            $user->has_cap('view_pos_reports') ||
             $user->has_cap('administrator')
         );
     }
@@ -75,7 +75,7 @@ class Permissions {
         }
         $user = get_userdata($user_id);
         return $user && (
-            $user->has_cap('apply_discounts') || 
+            $user->has_cap('apply_discounts') ||
             $user->has_cap('administrator')
         );
     }
@@ -109,6 +109,11 @@ class Permissions {
         if (!is_user_logged_in()) {
             return new \WP_Error('not_logged_in', __('You must be logged in.', 'store-pos'), ['status' => 401]);
         }
+
+		//return true, if the role is administrator
+		if (current_user_can('administrator')) {
+			return true;
+		}
 
         if (!current_user_can($capability)) {
             return new \WP_Error('insufficient_permissions', __('You do not have permission to perform this action.', 'store-pos'), ['status' => 403]);
