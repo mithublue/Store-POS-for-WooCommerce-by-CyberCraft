@@ -14,15 +14,80 @@
         // Outlet management
         $('#add-outlet-btn').on('click', function(e) {
             e.preventDefault();
-            // TODO: Open modal for adding outlet
-            alert('Outlet creation modal - Coming soon');
+            
+            var name = prompt('Enter outlet name:');
+            if (!name) return;
+            
+            var address = prompt('Enter outlet address (optional):');
+            var phone = prompt('Enter outlet phone (optional):');
+            
+            // Create outlet via REST API
+            $.ajax({
+                url: storePOSAdmin.restUrl + '/outlets',
+                method: 'POST',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', storePOSAdmin.restNonce);
+                },
+                data: JSON.stringify({
+                    name: name,
+                    address: address || '',
+                    phone: phone || '',
+                    status: 'active'
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    alert('Outlet created successfully!');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    var message = xhr.responseJSON && xhr.responseJSON.message 
+                        ? xhr.responseJSON.message 
+                        : 'Failed to create outlet';
+                    alert('Error: ' + message);
+                }
+            });
         });
 
         // Drawer management
         $('#add-drawer-btn').on('click', function(e) {
             e.preventDefault();
-            // TODO: Open modal for adding drawer
-            alert('Drawer creation modal - Coming soon');
+            
+            var name = prompt('Enter drawer name:');
+            if (!name) return;
+            
+            var outletId = prompt('Enter outlet ID:');
+            if (!outletId) {
+                alert('Outlet ID is required. Please create an outlet first.');
+                return;
+            }
+            
+            var printer = prompt('Enter printer name (optional):');
+            
+            // Create drawer via REST API
+            $.ajax({
+                url: storePOSAdmin.restUrl + '/drawers',
+                method: 'POST',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', storePOSAdmin.restNonce);
+                },
+                data: JSON.stringify({
+                    name: name,
+                    outlet_id: parseInt(outletId),
+                    printer: printer || '',
+                    status: 'active'
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    alert('Drawer created successfully!');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    var message = xhr.responseJSON && xhr.responseJSON.message 
+                        ? xhr.responseJSON.message 
+                        : 'Failed to create drawer';
+                    alert('Error: ' + message);
+                }
+            });
         });
 
         // Confirmation for delete actions
