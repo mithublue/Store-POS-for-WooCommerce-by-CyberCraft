@@ -7,7 +7,7 @@ import CheckoutModal from './CheckoutModal';
 import CustomerSelectModal from './CustomerSelectModal';
 import CouponModal from './CouponModal';
 
-const CartPanel = () => {
+const CartPanel = ({ settings = {} }) => {
   const {
     items,
     customer,
@@ -22,6 +22,15 @@ const CartPanel = () => {
     getTotal,
     getTotalItems,
   } = useCart();
+
+  const config = window.storePOSConfig || {};
+  const mergedSettings = {
+    ...(config.settings || {}),
+    ...settings,
+  };
+
+  const taxDisplayLabel = mergedSettings.tax_display === 'excl' ? 'Totals exclude tax' : 'Totals include tax';
+  const autoPrintEnabled = !!mergedSettings.auto_print;
 
   const [showCheckout, setShowCheckout] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -38,8 +47,15 @@ const CartPanel = () => {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-bold text-gray-900">Current Order</h2>
-        <p className="text-sm text-gray-600">{getTotalItems()} items</p>
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Current Order</h2>
+          <p className="text-sm text-gray-600">{getTotalItems()} items</p>
+        </div>
+        {autoPrintEnabled && (
+          <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded">
+            Auto print enabled
+          </span>
+        )}
       </div>
 
       {/* Cart Items */}
@@ -157,6 +173,7 @@ const CartPanel = () => {
             <span>Total</span>
             <span className="text-primary-600">{formatPrice(getTotal())}</span>
           </div>
+          <p className="text-xs text-gray-500">{taxDisplayLabel}</p>
         </div>
 
         {/* Action Buttons */}
@@ -188,7 +205,7 @@ const CartPanel = () => {
 
       {/* Modals */}
       {showCheckout && (
-        <CheckoutModal onClose={() => setShowCheckout(false)} />
+        <CheckoutModal onClose={() => setShowCheckout(false)} settings={mergedSettings} />
       )}
 
       {showCustomerModal && (

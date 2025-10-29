@@ -7,6 +7,7 @@
 
 namespace StorePOS\Frontend;
 
+use StorePOS\API\SettingsAPI;
 use StorePOS\Helpers\Permissions;
 
 class POSShortcode {
@@ -96,32 +97,37 @@ class POSShortcode {
         }
 
         if (wp_script_is($script_handle, 'enqueued')) {
+            $settings = SettingsAPI::get_settings_data();
+
+            // Preserve additional settings not yet migrated to the REST map.
+            $settings['enable_typesense'] = get_option('store_pos_enable_typesense', 'no') === 'yes';
+            $settings['typesense'] = [
+                'host' => get_option('store_pos_typesense_host', ''),
+                'port' => get_option('store_pos_typesense_port', '8108'),
+                'protocol' => get_option('store_pos_typesense_protocol', 'http'),
+                'api_key' => get_option('store_pos_typesense_api_key', ''),
+            ];
+
             wp_localize_script('store-pos-app', 'storePOSConfig', [
-            'restUrl' => rest_url('store-pos/v1'),
-            'restNonce' => wp_create_nonce('wp_rest'),
-            'basename' => $basename,
-            'currentUser' => [
-                'id' => get_current_user_id(),
-                'name' => wp_get_current_user()->display_name,
-                'email' => wp_get_current_user()->user_email,
-                'roles' => wp_get_current_user()->roles,
-            ],
-            'currency' => [
-                'code' => get_woocommerce_currency(),
-                'symbol' => html_entity_decode(get_woocommerce_currency_symbol()),
-                'position' => get_option('woocommerce_currency_pos'),
-                'decimal_separator' => wc_get_price_decimal_separator(),
-                'thousand_separator' => wc_get_price_thousand_separator(),
-                'decimals' => wc_get_price_decimals(),
-            ],
-            'settings' => [
-                'tax_display' => get_option('store_pos_tax_display', 'incl'),
-                'auto_print' => get_option('store_pos_auto_print', 'yes'),
-                'barcode_field' => get_option('store_pos_barcode_field', '_sku'),
-                'enable_typesense' => get_option('store_pos_enable_typesense', 'no'),
-                'products_per_row' => (int) get_option('store_pos_products_per_row', 4),
-            ],
-        ]);
+                'restUrl' => rest_url('store-pos/v1'),
+                'restNonce' => wp_create_nonce('wp_rest'),
+                'basename' => $basename,
+                'currentUser' => [
+                    'id' => get_current_user_id(),
+                    'name' => wp_get_current_user()->display_name,
+                    'email' => wp_get_current_user()->user_email,
+                    'roles' => wp_get_current_user()->roles,
+                ],
+                'currency' => [
+                    'code' => get_woocommerce_currency(),
+                    'symbol' => html_entity_decode(get_woocommerce_currency_symbol()),
+                    'position' => get_option('woocommerce_currency_pos'),
+                    'decimal_separator' => wc_get_price_decimal_separator(),
+                    'thousand_separator' => wc_get_price_thousand_separator(),
+                    'decimals' => wc_get_price_decimals(),
+                ],
+                'settings' => $settings,
+            ]);
         }
     }
 

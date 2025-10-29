@@ -48,4 +48,9 @@ export const reportsAPI = {
   getTopProducts: (params) => api.get('/reports/top-products', { params }),
 };
 
+export const settingsAPI = {
+  get: () => api.get('/settings'),
+  update: (data) => api.post('/settings', data),
+};
+
 export default api;

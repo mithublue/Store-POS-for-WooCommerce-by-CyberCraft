@@ -7,6 +7,7 @@
 
 namespace StorePOS\Admin;
 
+use StorePOS\API\SettingsAPI;
 use StorePOS\Helpers\Permissions;
 
 class AdminMenu {
@@ -305,6 +306,7 @@ class AdminMenu {
                 'email' => wp_get_current_user()->user_email,
                 'roles' => wp_get_current_user()->roles,
             ],
+            'settings' => SettingsAPI::get_settings_data(),
         ]);
     }
 
@@ -352,7 +354,7 @@ class AdminMenu {
                 }
 
                 // Update top-level link
-                const topLink = menu.querySelector('> a.menu-top');
+                const topLink = menu.querySelector('a.menu-top');
                 if (topLink) {
                     topLink.href = baseUrl + '#dashboard';
                 }

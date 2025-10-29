@@ -14076,9 +14076,9 @@ const TopBar = ({ searchQuery, setSearchQuery }) => {
     showDrawerModal && /* @__PURE__ */ jsxRuntimeExports.jsx(DrawerStatusModal, { onClose: () => setShowDrawerModal(false) })
   ] });
 };
-const ProductGrid = ({ searchQuery, selectedCategory }) => {
+const ProductGrid = ({ searchQuery, selectedCategory, settings: settingsProp }) => {
   const config2 = window.storePOSConfig || {};
-  const settings = config2.settings || {};
+  const settings = settingsProp || config2.settings || {};
   const [products, setProducts] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(false);
   const [page, setPage] = reactExports.useState(1);
@@ -14720,7 +14720,7 @@ const CouponModal = ({ onClose }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 border-t border-gray-200 bg-gray-50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "w-full btn btn-secondary", children: "Done" }) })
   ] }) });
 };
-const CartPanel = () => {
+const CartPanel = ({ settings = {} }) => {
   const {
     items,
     customer,
@@ -14735,6 +14735,13 @@ const CartPanel = () => {
     getTotal,
     getTotalItems
   } = useCart();
+  const config2 = window.storePOSConfig || {};
+  const mergedSettings = {
+    ...config2.settings || {},
+    ...settings
+  };
+  const taxDisplayLabel = mergedSettings.tax_display === "excl" ? "Totals exclude tax" : "Totals include tax";
+  const autoPrintEnabled = !!mergedSettings.auto_print;
   const [showCheckout, setShowCheckout] = reactExports.useState(false);
   const [showCustomerModal, setShowCustomerModal] = reactExports.useState(false);
   const [showCouponModal, setShowCouponModal] = reactExports.useState(false);
@@ -14746,11 +14753,14 @@ const CartPanel = () => {
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-200", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-gray-900", children: "Current Order" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-600", children: [
-        getTotalItems(),
-        " items"
-      ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-gray-900", children: "Current Order" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-600", children: [
+          getTotalItems(),
+          " items"
+        ] })
+      ] }),
+      autoPrintEnabled && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded", children: "Auto print enabled" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-4 space-y-3", children: items.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-12", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500", children: "Cart is empty" }),
@@ -14853,7 +14863,8 @@ const CartPanel = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-lg font-bold pt-2 border-t border-gray-200", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Total" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-primary-600", children: formatPrice(getTotal()) })
-        ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: taxDisplayLabel })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -14888,7 +14899,7 @@ const CartPanel = () => {
         }
       )
     ] }),
-    showCheckout && /* @__PURE__ */ jsxRuntimeExports.jsx(CheckoutModal, { onClose: () => setShowCheckout(false) }),
+    showCheckout && /* @__PURE__ */ jsxRuntimeExports.jsx(CheckoutModal, { onClose: () => setShowCheckout(false), settings: mergedSettings }),
     showCustomerModal && /* @__PURE__ */ jsxRuntimeExports.jsx(CustomerSelectModal, { onClose: () => setShowCustomerModal(false) }),
     showCouponModal && /* @__PURE__ */ jsxRuntimeExports.jsx(CouponModal, { onClose: () => setShowCouponModal(false) })
   ] });
@@ -14987,6 +14998,24 @@ const POSLayout = () => {
   const [selectedCategory, setSelectedCategory] = reactExports.useState(null);
   const [searchQuery, setSearchQuery] = reactExports.useState("");
   const { addItem } = useCart();
+  const config2 = window.storePOSConfig || {};
+  const settings = config2.settings || {};
+  reactExports.useEffect(() => {
+    const body = document.body;
+    body.classList.toggle("pos-theme-dark", settings.theme === "dark");
+    body.classList.toggle("pos-layout-compact", settings.layout === "compact");
+    return () => {
+      body.classList.remove("pos-theme-dark");
+      body.classList.remove("pos-layout-compact");
+    };
+  }, [settings.theme, settings.layout]);
+  const layoutConfig = {
+    categoriesWidth: settings.layout === "compact" ? "w-56" : "w-64",
+    contentPadding: settings.layout === "compact" ? "p-3 md:p-4" : "p-4 md:p-6",
+    cartWidth: settings.layout === "compact" ? "w-80" : "w-96"
+  };
+  const panelClass = settings.theme === "dark" ? "bg-gray-800 border border-gray-700 text-gray-100" : "bg-white border border-gray-200";
+  const rootBackground = settings.theme === "dark" ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900";
   const handleBarcodeScan = async (barcode) => {
     try {
       const response = await productsAPI.getByBarcode(barcode);
@@ -15003,24 +15032,25 @@ const POSLayout = () => {
     maxLength: 20,
     timeout: 100
   });
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-screen bg-gray-50", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex flex-col h-screen ${rootBackground}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(TopBar, { searchQuery, setSearchQuery }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-1 overflow-hidden", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-64 bg-white border-r border-gray-200 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pos-main flex flex-1 overflow-hidden", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `pos-categories ${layoutConfig.categoriesWidth} ${panelClass} border-l-0 overflow-y-auto`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         CategorySidebar,
         {
           selectedCategory,
           onSelectCategory: setSelectedCategory
         }
       ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex-1 overflow-y-auto ${panelClass} border-l-0 border-r-0 ${layoutConfig.contentPadding}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         ProductGrid,
         {
           searchQuery,
-          selectedCategory
+          selectedCategory,
+          settings
         }
       ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-96 bg-white border-l border-gray-200 flex flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CartPanel, {}) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${layoutConfig.cartWidth} ${panelClass} border-l flex flex-col`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(CartPanel, { settings }) })
     ] })
   ] });
 };
@@ -15138,4 +15168,4 @@ try {
     `;
   }
 }
-//# sourceMappingURL=main-BPAjxRsy.js.map
+//# sourceMappingURL=main-Bx4YjgHl.js.map

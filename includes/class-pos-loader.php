@@ -65,6 +65,7 @@ class Loader {
         require_once STORE_POS_PLUGIN_DIR . 'includes/API/class-pos-drawers-api.php';
         require_once STORE_POS_PLUGIN_DIR . 'includes/API/class-pos-coupons-api.php';
         require_once STORE_POS_PLUGIN_DIR . 'includes/API/class-pos-reports-api.php';
+        require_once STORE_POS_PLUGIN_DIR . 'includes/API/class-pos-settings-api.php';
 
         // Frontend
         require_once STORE_POS_PLUGIN_DIR . 'includes/Frontend/class-pos-frontend.php';
@@ -113,6 +114,7 @@ class Loader {
             new API\DrawersAPI(),
             new API\CouponsAPI(),
             new API\ReportsAPI(),
+            new API\SettingsAPI(),
         ];
 
         foreach ($controllers as $controller) {

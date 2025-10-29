@@ -6,9 +6,9 @@ import useDebounce from '../hooks/useDebounce';
 import toast from 'react-hot-toast';
 import { FiShoppingCart, FiPackage } from 'react-icons/fi';
 
-const ProductGrid = ({ searchQuery, selectedCategory }) => {
+const ProductGrid = ({ searchQuery, selectedCategory, settings: settingsProp }) => {
   const config = window.storePOSConfig || {};
-  const settings = config.settings || {};
+  const settings = settingsProp || config.settings || {};
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
